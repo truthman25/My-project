@@ -1,0 +1,107 @@
+library(forecast)
+library(zoo)
+library(readxl)
+library(tseries)
+
+data <- read_excel("C:/Users/CIC/Desktop/New folder/Inflation.xlsx")
+
+# Display the structure of the data to verify it is read correctly
+str(data)
+
+# Check if 'Year' and 'Month' columns are numeric
+if (!is.numeric(data$Year) | !is.numeric(data$Month)) {
+  stop("Year and Month columns must be numeric")
+}
+
+# Combine Year and Month into a Date
+data$Date <- as.Date(paste(data$Year, data$Month, "01", sep = "-"), "%Y-%m-%d")
+
+# Order data by Date (just in case)
+data <- data[order(data$Date), ]
+
+# Check the first few rows to ensure correctness
+head(data)
+
+# Convert to time series
+# Start date is the year and month of the first observation
+start_year <- data$Year[1]
+start_month <- data$Month[1]
+
+# Ensure that the start_year and start_month are not NULL or NA
+if (is.na(start_year) | is.na(start_month)) {
+  stop("Start year or start month is NA")
+}
+
+# Convert to ts object
+inflation_ts <- ts(data$inflation, start = c(start_year, start_month), frequency = 12)
+
+# Print the time series
+print(inflation_ts)
+
+#exporting the dataset back
+write.csv(inflation_ts, "C:/Users/CIC/Desktop/New folder/dataForinflation.csv")
+
+# Check the type of data
+class(inflation_ts)
+
+# access the starting and ending
+start(inflation_ts)
+end(inflation_ts)
+
+# get summary of data
+summary(inflation_ts)
+
+# Load as time series in season
+tsdata=ts(inflation_ts, frequency = 12)
+tsdata
+
+#exporting the dataset back
+write.csv(tsdata, "C:/Users/CIC/Desktop/New folder/dataForinflation.csv")
+
+# Time series plot
+ddata= decompose(tsdata, "multiplicative")
+plot(ddata$trend)
+plot(ddata$seasonal)
+plot(ddata$random)
+
+# Trend only
+plot(inflation_ts)
+
+# Access for stationary
+adf_data=adf.test(tsdata, alternative = c("stationary"),
+                  k = trunc((length(ts_data)-1)^(1/3)))
+adf_data
+
+#Getting number of differencing required
+no=ndiffs(tsdata)
+no
+plot(tsdata)
+
+#differencing
+diffData=diff(tsdata, lag = 1, differences = 2)
+diffData
+plot(diffData)
+
+# Access for stationary for differnced data
+adf_diffData=adf.test(diffData, alternative = c("stationary"),
+                      k = trunc((length(ts_data)-1)^(1/3)))
+adf_diffData
+
+# Accessing possible model combination 
+mymodel = auto.arima(inflation_ts)
+mymodel
+
+# Fitting Model
+auto.arima(inflation_ts, ic="aic", trace = T)
+plot.ts(mymodel$residuals)
+
+# ACF and PACF of the residuals
+acf(ts(mymodel$residuals), main = "ACF Residuals")
+pacf(ts(mymodel$residuals), main = "PACF Residuals")
+
+# Forecasting
+myforecast = forecast(mymodel, level = c(95), 4*10)
+myforecast
+plot(myforecast)
+#exporting the forecast back
+write.csv(myforecast, "C:/Users/CIC/Desktop/New folder/forecast.csv")
